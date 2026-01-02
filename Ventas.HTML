@@ -1,0 +1,608 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Control de Ventas - Buzos</title>
+  <style>
+    :root{
+      --bg:#f7fbfb; --card:#ffffff; --muted:#6b7280; --accent:#7dd3fc; --success:#86efac; --danger:#fecaca; --soft:#eef2f7;
+      --radius:10px; --pad:14px; --maxw:980px;
+    }
+    *{box-sizing:border-box;font-family:Inter,Segoe UI,Roboto,Arial,sans-serif}
+    body{background:var(--bg);color:#0f172a;display:flex;align-items:flex-start;justify-content:center;padding:28px}
+    .container{width:100%;max-width:var(--maxw);position:relative}
+    header{display:flex;align-items:center;gap:12px;margin-bottom:18px}
+    header h1{font-size:20px;margin:0}
+    .grid{display:grid;grid-template-columns:1fr 360px;gap:18px}
+    .grid.config-hidden{grid-template-columns:1fr}
+    .card{background:var(--card);border-radius:var(--radius);padding:var(--pad);box-shadow:0 6px 18px rgba(16,24,40,0.06);transition:transform .28s,opacity .28s}
+    .card.hidden{transform:translateX(8px);opacity:0;pointer-events:none}
+    label{display:block;font-size:13px;color:var(--muted);margin-bottom:6px}
+    input[type="text"], input[type="number"], input[type="date"], input[type="time"], select{width:100%;padding:10px;border-radius:8px;border:1px solid #e6eef6;background:var(--soft);font-size:14px}
+    input[type="color"]{height:40px;width:56px;padding:0;border-radius:8px;border:1px solid #e6eef6}
+    .row{display:flex;gap:12px}
+    .row > *{flex:1}
+    .btn-primary{background:linear-gradient(90deg,#60a5fa,#7dd3fc);color:#04263b;border:none;padding:14px 18px;border-radius:12px;font-weight:600;font-size:16px;cursor:pointer;width:100%}
+    .btn-small{background:#f1f5f9;border:none;padding:8px 10px;border-radius:8px;cursor:pointer}
+    .sales-list{margin-top:12px;border-top:1px dashed #e6eef6;padding-top:12px}
+    .sale-item{display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px dashed #f1f5f9}
+    .sale-item.warn{background:linear-gradient(90deg,rgba(254,202,202,0.18),rgba(255,255,255,0))}
+    table{width:100%;border-collapse:collapse;margin-top:12px}
+    th,td{padding:8px;border-bottom:1px solid #eef2f7;text-align:left;font-size:13px}
+    .small{font-size:12px;color:var(--muted)}
+    .config-type{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;align-items:center}
+    .alert{padding:10px;border-radius:8px;background:var(--danger);color:#8b0f00;font-weight:600}
+    .muted-note{font-size:12px;color:var(--muted)}
+    /* Panel de configuración deslizante */
+    .config-panel{position:fixed;right:-420px;top:0;height:100vh;width:360px;max-width:92%;box-shadow: -6px 0 24px rgba(2,6,23,0.08);z-index:40;padding:20px;transition:right .28s ease-in-out;overflow:auto;border-left:1px solid transparent}
+    .config-panel.open{right:0;border-left:1px solid #eef2f7}
+    body.no-scroll{overflow:hidden}
+    /* escondemos cualquier overflow en mobile para que el panel ocupe toda la pantalla */
+    @media (max-width:600px){
+      .config-panel{width:100%;right:-100%;top:0;height:100vh;border-radius:0;padding:16px}
+      .config-panel.open{right:0}
+      .card{border-radius:0}
+    }
+    /* historial */
+    .hist-item{display:flex;justify-content:space-between;align-items:center;padding:8px;border-radius:8px;background:var(--soft);margin-bottom:8px;font-size:13px}
+    .hist-meta{color:var(--muted);font-size:12px}
+    #toggleConfig{z-index:30}
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>Control de Ventas - Buzos</h1>
+      <div style="margin-left:auto">
+        <button id="toggleConfig" class="btn-small" aria-expanded="false">Configuración </button>
+      </div>
+    </header>
+
+    <div class="grid">
+      <!-- Main: Registro de venta -->
+      <section class="card">
+        <h2 style="margin-top:0">Registro de venta </h2>
+
+        <div class="row">
+          <div>
+            <label for="date">Día</label>
+            <input type="date" id="date">
+          </div>
+          <div>
+            <label for="time">Hora</label>
+            <input type="time" id="time">
+          </div>
+        </div>
+
+        <div style="margin-top:12px">
+          <label for="type">Tipo de buzo</label>
+          <select id="type">
+            <option value="hombre">Hombre</option>
+            <option value="mujer">Mujer</option>
+            <option value="nino">Niño</option>
+          </select>
+        </div>
+
+        <div class="row" style="margin-top:12px;align-items:center">
+          <div>
+            <label for="color">Color</label>
+            <div style="display:flex;gap:8px;align-items:center">
+              <input type="color" id="color" value="#ffffff">
+              <input type="text" id="colorText" placeholder="#ffffff" list="colorNames" style="width:140px;padding:8px;border-radius:8px;border:1px solid #e6eef6;background:var(--soft);">
+              <datalist id="colorNames">
+                <option value="rojo">
+                <option value="rojo oscuro">
+                <option value="granate">
+                <option value="rosa">
+                <option value="rosado">
+                <option value="fucsia">
+                <option value="magenta">
+                <option value="naranja">
+                <option value="amarillo">
+                <option value="dorado">
+                <option value="verde">
+                <option value="verde claro">
+                <option value="verde oscuro">
+                <option value="verde lima">
+                <option value="verde oliva">
+                <option value="azul">
+                <option value="azul claro">
+                <option value="azul oscuro">
+                <option value="azul marino">
+                <option value="celeste">
+                <option value="turquesa">
+                <option value="cian">
+                <option value="teal">
+                <option value="morado">
+                <option value="violeta">
+                <option value="lila">
+                <option value="marrón">
+                <option value="marron">
+                <option value="beige">
+                <option value="gris">
+                <option value="gris claro">
+                <option value="gris oscuro">
+                <option value="negro">
+                <option value="blanco">
+                <option value="salmon">
+                <option value="coral">
+                <option value="ocre">
+                <option value="cobre">
+                <option value="marfil">
+                <option value="burdeos">
+                <option value="vino">
+                <option value="plata">
+                <option value="crema">
+                <option value="#ff0000">
+                <option value="#00ff00">
+                <option value="#0000ff">
+              </datalist>
+            </div>
+            <div id="colorStatus" class="small muted-note" style="margin-top:6px"></div>
+          </div>
+          <div>
+            <label for="qty">Cantidad vendida</label>
+            <input type="number" id="qty" min="1" value="1">
+          </div>
+        </div>
+
+        <div style="margin-top:12px">
+          <label for="price">Precio de venta unitario (Bs)</label>
+          <input type="number" id="price" step="0.01" min="0" value="0.00">
+        </div>
+
+        <div style="margin-top:14px">
+          <button class="btn-primary" id="registerBtn">Registrar venta</button>
+        </div>
+
+        <div id="saleAlertContainer" style="margin-top:12px"></div>
+
+        <div class="sales-list" id="salesList">
+          <h3 class="small">Ventas registradas</h3>
+          <div id="salesTableContainer"></div>
+          <div style="margin-top:8px;display:flex;gap:8px">
+            <button class="btn-small" id="clearSales">Borrar ventas</button>
+            <div class="muted-note" style="margin-left:auto">Los registros se guardan en tu navegador</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Sidebar: Configuración (panel deslizante) -->
+      <aside id="configPanel" class="card config-panel" aria-hidden="true" role="dialog" aria-label="Configuración de inversión">
+        <button id="closePanel" class="btn-small" style="position:absolute;right:12px;top:12px">Cerrar</button>
+        <h2 style="margin-top:0">Configuración de inversión </h2>
+
+        <div style="margin-top:8px">
+          <label for="investment">Inversión total inicial (Bs)</label>
+          <input type="number" id="investment" step="0.01" min="0" value="0.00">
+        </div>
+
+        <div style="margin-top:12px">
+          <label for="spent">Total gastado en la compra (Bs)</label>
+          <input type="number" id="spent" step="0.01" min="0" value="0.00">
+          <div id="spendAlert" class="small muted-note" style="margin-top:6px"></div>
+        </div>
+
+        <div style="margin-top:12px" class="row">
+          <div>
+            <label for="totalBought">Cantidad total de buzos comprados</label>
+            <input type="number" id="totalBought" min="1" value="1">
+          </div>
+          <div>
+            <label>Costo real unitario</label>
+            <input type="number" id="computedCost" step="0.01" readonly>
+          </div>
+        </div>
+
+        <div style="margin-top:12px">
+          <label for="remaining">Sobrante de la inversión (Bs)</label>
+          <input type="number" id="remaining" step="0.01" readonly>
+        </div>
+
+
+
+        <hr style="margin:12px 0;border:none;border-top:1px solid #eef2f7">
+        <h3 style="margin:0 0 8px 0">Costos y precios por tipo</h3>
+        <div class="config-type">
+          <div>
+            <label class="small">Tipo</label>
+            <div class="small">Hombre</div>
+          </div>
+          <div>
+            <label class="small">Costo real unitario (Bs)</label>
+            <input type="number" class="type-cost" data-type="hombre" step="0.01" min="0">
+          </div>
+          <div>
+            <label class="small">Precio mínimo sugerido (Bs)</label>
+            <input type="number" class="type-min" data-type="hombre" step="0.01" min="0">
+          </div>
+        </div>
+        <div class="config-type" style="margin-top:8px">
+          <div>
+            <div class="small">Mujer</div>
+          </div>
+          <div>
+            <input type="number" class="type-cost" data-type="mujer" step="0.01" min="0">
+          </div>
+          <div>
+            <input type="number" class="type-min" data-type="mujer" step="0.01" min="0">
+          </div>
+        </div>
+        <div class="config-type" style="margin-top:8px">
+          <div>
+            <div class="small">Niño</div>
+          </div>
+          <div>
+            <input type="number" class="type-cost" data-type="nino" step="0.01" min="0">
+          </div>
+          <div>
+            <input type="number" class="type-min" data-type="nino" step="0.01" min="0">
+          </div>
+        </div>
+
+
+
+        <div style="margin-top:12px;display:flex;gap:8px;align-items:center">
+          <button class="btn-small" id="saveConfig">Guardar configuración</button>
+          <div class="muted-note">Los cambios se aplican automáticamente a futuras ventas</div>
+        </div>
+
+        <div id="configNote" style="margin-top:12px" class="muted-note">Si un costo por tipo está vacío, se usa el costo real unitario calculado.</div>
+
+        <hr style="margin:12px 0;border:none;border-top:1px solid #eef2f7">
+        <h3 style="margin:0 0 8px 0">Historial de inversiones</h3>
+        <div id="investmentHistory" style="max-height:160px;overflow:auto"></div>
+        <div style="margin-top:8px;display:flex;gap:8px">
+          <button class="btn-small" id="clearHistory" onclick="clearHistory()">Limpiar historial</button>
+        </div>
+      </aside>
+    </div>
+  </div>
+
+<script>
+// --- Helper: storage ---
+const STORAGE = {
+  load(key, fallback){ try{ const v = localStorage.getItem(key); return v ? JSON.parse(v) : fallback }catch(e){return fallback} },
+  save(key, val){ localStorage.setItem(key, JSON.stringify(val)); }
+}
+
+// --- Elements ---
+const dateEl = document.getElementById('date');
+const timeEl = document.getElementById('time');
+const typeEl = document.getElementById('type');
+const colorEl = document.getElementById('color');
+const qtyEl = document.getElementById('qty');
+const priceEl = document.getElementById('price');
+const registerBtn = document.getElementById('registerBtn');
+const salesTableContainer = document.getElementById('salesTableContainer');
+const saleAlertContainer = document.getElementById('saleAlertContainer');
+const clearSalesBtn = document.getElementById('clearSales');
+
+const investmentEl = document.getElementById('investment');
+const totalBoughtEl = document.getElementById('totalBought');
+const computedCostEl = document.getElementById('computedCost');
+const spentEl = document.getElementById('spent');
+const remainingEl = document.getElementById('remaining');
+const spendAlert = document.getElementById('spendAlert');
+const saveConfigBtn = document.getElementById('saveConfig');
+const typeCostEls = document.querySelectorAll('.type-cost');
+const typeMinEls = document.querySelectorAll('.type-min');
+
+// Extra elements (new)
+const colorTextEl = document.getElementById('colorText');
+const toggleConfigBtn = document.getElementById('toggleConfig');
+const gridEl = document.querySelector('.grid');
+const investmentHistoryEl = document.getElementById('investmentHistory');
+const clearHistoryBtn = document.getElementById('clearHistory');
+
+// --- App state ---
+let sales = STORAGE.load('ventas_list', []);
+let config = STORAGE.load('ventas_config', {
+  investment:0, totalBought:1, spent:0, perType:{}, perTypeMin:{}, history:[], panelOpen:true
+});
+
+// --- Init date/time ---
+function pad(n){return n<10?'0'+n:n}
+const now = new Date();
+if(!dateEl.value) dateEl.value = now.toISOString().slice(0,10);
+if(!timeEl.value) timeEl.value = pad(now.getHours())+':'+pad(now.getMinutes());
+
+// --- Helpers ---
+function computeCostReal(){
+  const inv = parseFloat(investmentEl.value) || 0;
+  const spent = parseFloat(spentEl.value) || 0;
+  const total = parseFloat(totalBoughtEl.value) || 1;
+  // si el usuario indicó gasto real, lo usamos; si no, usamos la inversión
+  const base = (spent>0) ? spent : inv;
+  const v = total>0 ? (base/total) : 0;
+  computedCostEl.value = v.toFixed(2);
+  // sobrante
+  const remaining = (inv - spent);
+  if(remainingEl) remainingEl.value = remaining.toFixed(2);
+  if(spent > inv){ if(spendAlert) { spendAlert.textContent = 'Aviso: gastaste más que la inversión'; spendAlert.style.color = '#b91c1c'; } }
+  else { if(spendAlert) { spendAlert.textContent = ''; } }
+  return v;
+}
+
+function getSuggestedPrice(t){
+  const cost = getCostUnitForType(t);
+  let suggested = null;
+  if(config.perTypeMin && config.perTypeMin[t] !== undefined) suggested = config.perTypeMin[t];
+  else suggested = cost * 1.3; // default markup
+  if(suggested < cost) suggested = cost;
+  return +suggested.toFixed(2);
+}
+
+function setSuggestedPriceForCurrentType(){
+  const s = getSuggestedPrice(typeEl.value);
+  priceEl.value = s.toFixed(2);
+}
+
+function loadConfigToUI(){
+  investmentEl.value = config.investment ?? 0;
+  spentEl.value = config.spent ?? 0;
+  totalBoughtEl.value = config.totalBought ?? 1;
+  typeCostEls.forEach(el => { const t = el.dataset.type; el.value = (config.perType[t]!=undefined)?config.perType[t]:'' });
+  typeMinEls.forEach(el => { const t = el.dataset.type; el.value = (config.perTypeMin[t]!=undefined)?config.perTypeMin[t]:'' });
+  computeCostReal();
+  renderHistory();
+}
+
+function saveConfig(){
+  config.investment = parseFloat(investmentEl.value) || 0;
+  config.spent = parseFloat(spentEl.value) || 0;
+  config.totalBought = parseFloat(totalBoughtEl.value) || 1;
+  config.perType = {};
+  config.perTypeMin = {};
+  typeCostEls.forEach(el => { if(el.value!=='') config.perType[el.dataset.type] = parseFloat(el.value) });
+  typeMinEls.forEach(el => { if(el.value!=='') config.perTypeMin[el.dataset.type] = parseFloat(el.value) });
+
+  // push to history (avoid duplicates): newest first
+  if(!config.history) config.history = [];
+  const entry = { ts: new Date().toISOString(), investment: config.investment, totalBought: config.totalBought, spent: config.spent };
+  const last = config.history[0];
+  if(!last || last.investment !== entry.investment || last.totalBought !== entry.totalBought || last.spent !== entry.spent){
+    config.history.unshift(entry);
+    if(config.history.length>20) config.history.length = 20;
+  }
+
+  STORAGE.save('ventas_config', config);
+  computeCostReal();
+  renderSales();
+  renderHistory();
+  setSuggestedPriceForCurrentType();
+  showTransientMessage('Configuración guardada ', 'success');
+}
+
+function getCostUnitForType(t){
+  const computed = computeCostReal();
+  if(config.perType && config.perType[t] !== undefined) return config.perType[t];
+  return computed;
+}
+
+function renderHistory(){
+  if(!investmentHistoryEl) return;
+  investmentHistoryEl.innerHTML = '';
+  if(!config.history || config.history.length===0){ investmentHistoryEl.innerHTML = '<div class="small">No hay historial</div>'; return; }
+  config.history.forEach((h, idx) =>{
+    const d = new Date(h.ts);
+    const div = document.createElement('div'); div.className = 'hist-item';
+    div.innerHTML = `<div><div class="hist-meta">${d.toLocaleString()}</div><div>Inversión: <strong>${h.investment.toFixed(2)} Bs</strong> • Gastado: <strong>${(h.spent||0).toFixed(2)} Bs</strong> • Cantidad: <strong>${h.totalBought}</strong></div></div><div style="display:flex;gap:8px"><button class="btn-small" data-idx="${idx}" data-action="restore">Restaurar</button></div>`;
+    investmentHistoryEl.appendChild(div);
+  });
+}
+
+function restoreHistory(idx){
+  const h = config.history[idx]; if(!h) return;
+  investmentEl.value = h.investment; spentEl.value = h.spent || 0; totalBoughtEl.value = h.totalBought; saveConfig();
+  showTransientMessage('Historial restaurado ','success');
+}
+
+function clearHistory(){
+  if(!confirm('Limpiar historial de inversiones?')) return;
+  config.history = [];
+  STORAGE.save('ventas_config', config);
+  renderHistory();
+  showTransientMessage('Historial borrado ','success');
+}
+
+// --- Sales register ---
+function validateSale(s){
+  if(!s.qty || s.qty<=0) return 'La cantidad debe ser mayor que 0.';
+  if(s.price==null || s.price<0) return 'Precio inválido.';
+  return null;
+}
+
+function addSale(){
+  const sale = {
+    date: dateEl.value,
+    time: timeEl.value,
+    type: typeEl.value,
+    color: colorEl.value,
+    qty: parseInt(qtyEl.value)||0,
+    price: parseFloat(priceEl.value)||0,
+    createdAt: new Date().toISOString()
+  };
+  const err = validateSale(sale);
+  if(err){ showTransientMessage(err,'error'); return; }
+
+  // determine cost unit
+  const costUnit = getCostUnitForType(sale.type);
+  sale.costUnit = parseFloat(costUnit.toFixed(2));
+  sale.totalCost = +(sale.costUnit * sale.qty).toFixed(2);
+  sale.revenue = +(sale.price * sale.qty).toFixed(2);
+  sale.profit = +(sale.revenue - sale.totalCost).toFixed(2);
+
+  // push
+  sales.unshift(sale);
+  STORAGE.save('ventas_list', sales);
+  renderSales();
+
+  // check alert
+  if(sale.price < sale.costUnit){
+    showTransientMessage(`Alerta: precio de venta (${sale.price} Bs) menor que costo real unitario (${sale.costUnit} Bs).`, 'warning');
+  } else {
+    showTransientMessage('Venta registrada ', 'success');
+  }
+}
+
+function showTransientMessage(msg, type){
+  saleAlertContainer.innerHTML = '';
+  const div = document.createElement('div');
+  if(type==='warning'){
+    div.className = 'alert';
+    div.textContent = msg;
+  } else if(type==='error'){
+    div.className = 'alert'; div.style.background = '#fee2e2'; div.style.color = '#7f1d1d'; div.textContent = msg;
+  } else {
+    div.className = 'muted-note'; div.style.background='var(--success)'; div.style.padding='8px'; div.style.borderRadius='8px'; div.textContent = msg;
+  }
+  saleAlertContainer.appendChild(div);
+  setTimeout(()=>{ div.remove(); }, 4000);
+}
+
+function renderSales(){
+  if(sales.length===0){ salesTableContainer.innerHTML = '<div class="small">No hay ventas registradas</div>'; return };
+  let html = '<table><thead><tr><th>Fecha</th><th>Tipo</th><th>Cant.</th><th>Precio U.</th><th>Costo U.</th><th>Recaudado</th><th>Ganancia</th></tr></thead><tbody>';
+  for(const s of sales){
+    const warn = s.price < s.costUnit;
+    html += `<tr class="sale ${warn? 'warn':''}"><td>${s.date} ${s.time}</td><td>${s.type} <span style="background:${s.color};display:inline-block;width:12px;height:12px;border-radius:3px;margin-left:6px;border:1px solid #ddd;vertical-align:middle"></span></td><td>${s.qty}</td><td>${s.price.toFixed(2)}</td><td>${s.costUnit.toFixed(2)}</td><td>${s.revenue.toFixed(2)}</td><td>${s.profit.toFixed(2)}</td></tr>`;
+  }
+  html += '</tbody></table>';
+  salesTableContainer.innerHTML = html;
+}
+
+// --- Events ---
+registerBtn.addEventListener('click', addSale);
+clearSalesBtn.addEventListener('click', ()=>{ if(confirm('Borrar todas las ventas?')){ sales = []; STORAGE.save('ventas_list', sales); renderSales(); } });
+
+investmentEl.addEventListener('input', ()=>{ computeCostReal(); setSuggestedPriceForCurrentType(); });
+if(spentEl) spentEl.addEventListener('input', ()=>{ computeCostReal(); setSuggestedPriceForCurrentType(); });
+totalBoughtEl.addEventListener('input', ()=>{ computeCostReal(); setSuggestedPriceForCurrentType(); });
+
+// save config when button clicked
+saveConfigBtn.addEventListener('click', saveConfig);
+
+// also persist per-type and min changes live
+typeCostEls.forEach(el => el.addEventListener('input', ()=>{/* don't auto-save yet */}));
+typeMinEls.forEach(el => el.addEventListener('input', ()=>{/* don't auto-save yet */}));
+
+// color sync (picker <-> text) con soporte para nombres en español y validación
+const esColorMap = {
+  'rojo':'red','rojo oscuro':'darkred','granate':'maroon','granate oscuro':'maroon','rosa':'pink','rosado':'pink','fucsia':'fuchsia','magenta':'magenta',
+  'naranja':'orange','amarillo':'yellow','dorado':'gold','dorado oscuro':'goldenrod','verde':'green','verde claro':'lightgreen','verde oscuro':'darkgreen','verde lima':'lime','verde oliva':'olive',
+  'azul':'blue','azul claro':'lightblue','azul oscuro':'darkblue','azul marino':'navy','celeste':'lightblue','turquesa':'turquoise','cian':'cyan','teal':'teal','azul petróleo':'teal',
+  'morado':'purple','violeta':'violet','lila':'violet','rosa palo':'lightpink','marron':'brown','marrón':'brown','beige':'beige','gris':'gray','gris claro':'lightgray','gris oscuro':'darkgray',
+  'negro':'black','blanco':'white','salmon':'salmon','coral':'coral','ocre':'peru','cobre':'sienna','marfil':'ivory','burdeos':'maroon','vino':'maroon','plata':'silver','crema':'ivory',
+  'lima':'lime','oliva':'olive','marino':'navy','siena':'sienna','chocolate':'chocolate'
+};
+
+function stripDiacritics(s){ try{ return s.normalize('NFD').replace(/[\u0300-\u036f]/g,''); }catch(e){ return s.replace(/[áÁàÀäÄéÉèÈëËíÍìÌïÏóÓòÒöÖúÚùÙüÜñÑ]/g,function(c){ const map={ 'á':'a','Á':'A','à':'a','À':'A','ä':'a','Ä':'A','é':'e','É':'E','è':'e','È':'E','ë':'e','Ë':'E','í':'i','Í':'I','ì':'i','Ì':'I','ï':'i','Ï':'I','ó':'o','Ó':'O','ò':'o','Ò':'O','ö':'o','Ö':'O','ú':'u','Ú':'U','ù':'u','Ù':'U','ü':'u','Ü':'U','ñ':'n','Ñ':'N' }; return map[c]||c; }); }}
+
+let colorTextEdited = false;
+let colorEditTimer = null;
+const colorStatusEl = document.getElementById('colorStatus');
+
+function setColorStatus(msg, ok){ if(!colorStatusEl) return; colorStatusEl.textContent = msg; colorStatusEl.style.color = ok ? 'green' : 'var(--muted)'; }
+
+function cssColorToHex(input){
+  // intenta aplicar el color a un elemento y devolver hex si es válido
+  const s = document.createElement('div');
+  s.style.color = input;
+  if(!s.style.color) return null; // inválido
+  document.body.appendChild(s);
+  const computed = getComputedStyle(s).color; // 'rgb(r, g, b)'
+  document.body.removeChild(s);
+  const m = computed.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)/i);
+  if(!m) return null;
+  const r = parseInt(m[1]), g = parseInt(m[2]), b = parseInt(m[3]);
+  const hex = '#' + [r,g,b].map(x=>x.toString(16).padStart(2,'0')).join('');
+  return hex.toLowerCase();
+}
+
+function normalizeColorInput(txt){
+  if(!txt) return null;
+  let t = txt.trim().toLowerCase();
+  t = stripDiacritics(t);
+  t = t.replace(/\s+/g,' ');
+  if(esColorMap[t]) return esColorMap[t];
+  return t; }
+
+function applyColorFromText(){
+  const raw = colorTextEl.value.trim();
+  if(!raw){ setColorStatus('', true); return; }
+  const candidate = normalizeColorInput(raw);
+  const hex = cssColorToHex(candidate || raw);
+  if(hex){
+    setColorStatus('Color válido: ' + (candidate || raw), true);
+    colorEl.value = hex; // actualiza el picker a la versión hex
+  } else {
+    setColorStatus('Color inválido', false);
+  }
+}
+
+// cuando el usuario escribe
+colorTextEl.addEventListener('input', ()=>{
+  colorTextEdited = true;
+  if(colorEditTimer) clearTimeout(colorEditTimer);
+  colorEditTimer = setTimeout(()=>{ colorTextEdited = false; }, 3000);
+  applyColorFromText();
+});
+colorTextEl.addEventListener('blur', ()=>{ applyColorFromText(); });
+
+// cuando usa el selector de color
+colorEl.addEventListener('input', ()=>{
+  const hex = colorEl.value;
+  setColorStatus('Color seleccionado: ' + hex, true);
+  // solo sobreescribe el texto si el usuario no lo editó manualmente hace poco
+  if(!colorTextEdited){ colorTextEl.value = hex; }
+});
+
+// inicializar
+if(colorTextEl){ colorTextEl.value = colorEl.value; setColorStatus('Color por defecto: ' + colorEl.value, true); }
+
+// set suggested price on type change
+typeEl.addEventListener('change', ()=>{ setSuggestedPriceForCurrentType(); });
+
+// config panel toggle
+const configPanelEl = document.getElementById('configPanel');
+const closePanelBtn = document.getElementById('closePanel');
+function setConfigOpen(open){
+  if(open){
+    if(configPanelEl) configPanelEl.classList.add('open');
+    if(configPanelEl) configPanelEl.setAttribute('aria-hidden','false');
+    if(toggleConfigBtn) { toggleConfigBtn.setAttribute('aria-expanded','true'); toggleConfigBtn.textContent = 'Cerrar configuración'; }
+    document.body.classList.add('no-scroll');
+  } else {
+    if(configPanelEl) configPanelEl.classList.remove('open');
+    if(configPanelEl) configPanelEl.setAttribute('aria-hidden','true');
+    if(toggleConfigBtn) { toggleConfigBtn.setAttribute('aria-expanded','false'); toggleConfigBtn.textContent = 'Configuración '; }
+    document.body.classList.remove('no-scroll');
+  }
+  config.panelOpen = !!open;
+  STORAGE.save('ventas_config', config);
+}
+if(toggleConfigBtn) toggleConfigBtn.addEventListener('click', ()=> setConfigOpen(!config.panelOpen));
+if(closePanelBtn) closePanelBtn.addEventListener('click', ()=> setConfigOpen(false));
+// close with Escape
+document.addEventListener('keydown', (e)=>{ if(e.key==='Escape') setConfigOpen(false); });
+
+// history actions
+if(investmentHistoryEl){ investmentHistoryEl.addEventListener('click', (ev)=>{ const b = ev.target.closest('button[data-action]'); if(!b) return; const idx = parseInt(b.dataset.idx); if(b.dataset.action==='restore') restoreHistory(idx); }); }
+if(clearHistoryBtn) clearHistoryBtn.addEventListener('click', clearHistory);
+
+// shortcuts: save config on unload
+window.addEventListener('beforeunload', () => { saveConfig(); });
+
+// --- Init load ---
+loadConfigToUI();
+renderSales();
+
+// expose compute button to ensure computed cost is accurate
+computeCostReal();
+setSuggestedPriceForCurrentType();
+setConfigOpen(config.panelOpen);
+</script>
+</body>
+</html>
